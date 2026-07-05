@@ -48,9 +48,9 @@ api_key = ""
 | 阿里百炼 | `bailian` | [bailian.console.aliyun.com](https://bailian.console.aliyun.com) |
 | DeepSeek | `deepseek` | [platform.deepseek.com](https://platform.deepseek.com) |
 
-## 打包为单文件 exe
+## 打包为单文件 exe.
 
-可使用 PyInstaller 打包为单文件 exe，无需 Python 环境即可运行。
+考虑到release分发的下载速度问题以及可扩展性 因此，提供build脚本用于用户本地打包。
 
 ```bash
 # 使用 uv 打包（推荐）
