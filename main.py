@@ -34,11 +34,6 @@ PROVIDER_CONFIGS = {
         "base_url": "https://api.siliconflow.cn/v1",
         "default_model": "Pro/deepseek-ai/DeepSeek-V3",
     },
-    "rinkoai": {
-        "name": "RinkoAI",
-        "base_url": "https://api.rinko.ai",
-        "default_model": "gpt-4o",
-    },
 }
 
 
