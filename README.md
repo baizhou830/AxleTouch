@@ -24,10 +24,10 @@
 
 ```bash
 # 1. 同步依赖（如遇 SSL 证书错误，加 --system-certs）
-uv sync --system-certs
+uv sync
 
 # 2. 运行
-uv run axle-touch
+uv run python main.py
 
 # 首次启动会自动生成 config.toml
 # 右键桌宠 → 配置文件设置，选择厂商并填入 API Key
@@ -47,6 +47,8 @@ api_key = ""
 | 阶跃星辰 | `stepfun` | [platform.stepfun.com](https://platform.stepfun.com) |
 | 阿里百炼 | `bailian` | [bailian.console.aliyun.com](https://bailian.console.aliyun.com) |
 | DeepSeek | `deepseek` | [platform.deepseek.com](https://platform.deepseek.com) |
+| 硅基流动 | `siliconflow` | [siliconflow.cn](https://siliconflow.cn) |
+| 自定义 | `custom` | 自行填写接口地址和模型名称 |
 
 ## 打包为单文件 exe
 

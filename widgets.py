@@ -346,6 +346,8 @@ PROVIDER_OPTIONS = [
     ("stepfun", "阶跃星辰"),
     ("bailian", "阿里百炼"),
     ("deepseek", "DeepSeek"),
+    ("siliconflow", "硅基流动"),
+    ("custom", "自定义"),
 ]
 
 
@@ -356,7 +358,7 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self._config = config.copy()
         self.setWindowTitle("设置")
-        self.setFixedSize(420, 300)
+        self.setFixedSize(420, 360)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
         self.setAttribute(Qt.WA_TranslucentBackground, False)
         self.init_ui()
@@ -396,6 +398,20 @@ class SettingsDialog(QDialog):
 
         layout.addLayout(form)
 
+        # 自定义厂商区域（接口地址 + 模型名称）
+        self._custom_group = QWidget(self)
+        custom_layout = QFormLayout(self._custom_group)
+        custom_layout.setContentsMargins(0, 0, 0, 0)
+        custom_layout.setSpacing(8)
+        self._custom_url_edit = QLineEdit(self._config.get("custom_base_url", ""))
+        self._custom_url_edit.setPlaceholderText("https://api.example.com/v1")
+        custom_layout.addRow("接口地址:", self._custom_url_edit)
+        self._custom_model_edit = QLineEdit(self._config.get("custom_model", ""))
+        self._custom_model_edit.setPlaceholderText("model-name")
+        custom_layout.addRow("模型名称:", self._custom_model_edit)
+        self._custom_group.setVisible(current_provider == "custom")
+        layout.addWidget(self._custom_group)
+
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self._on_save)
         buttons.rejected.connect(self.reject)
@@ -403,7 +419,13 @@ class SettingsDialog(QDialog):
 
     def _on_provider_changed(self, idx):
         pname = self._provider_combo.currentText()
+        is_custom = self._provider_combo.currentData() == "custom"
         self._api_key_edit.setPlaceholderText(f"输入 {pname} API Key")
+        self._custom_group.setVisible(is_custom)
+        if is_custom:
+            self.setFixedSize(420, 420)
+        else:
+            self.setFixedSize(420, 360)
 
     def _on_save(self):
         provider = self._provider_combo.currentData()
@@ -414,6 +436,9 @@ class SettingsDialog(QDialog):
         self._config["api_key"] = api_key
         self._config["icon_size"] = icon_size
         self._config["popup_width"] = popup_width
+        if provider == "custom":
+            self._config["custom_base_url"] = self._custom_url_edit.text().strip()
+            self._config["custom_model"] = self._custom_model_edit.text().strip()
         cfg_path = os.path.join(data_dir, "config.toml")
         try:
             with open(cfg_path, "w", encoding="utf-8") as f:
@@ -421,6 +446,9 @@ class SettingsDialog(QDialog):
                 f.write(f'api_key = "{api_key}"\n')
                 f.write(f'icon_size = {icon_size}\n')
                 f.write(f'popup_width = {popup_width}\n')
+                if provider == "custom":
+                    f.write(f'custom_base_url = "{self._config["custom_base_url"]}"\n')
+                    f.write(f'custom_model = "{self._config["custom_model"]}"\n')
         except Exception:
             pass
         self.config_saved.emit(self._config)
@@ -667,10 +695,7 @@ class EdgeFloatingBlock(QWidget):
         self._config = config
         self._apply_size_config()
         if self._ai:
-            self._ai.update(
-                config.get("provider", "stepfun"),
-                config.get("api_key", ""),
-            )
+            self._ai.update(config)
 
     def _card_rect(self):
         return QRectF(15, 15, self.width() - 30, self.height() - 30)

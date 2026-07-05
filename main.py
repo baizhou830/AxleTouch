@@ -29,6 +29,11 @@ PROVIDER_CONFIGS = {
         "base_url": "https://api.deepseek.com/v1",
         "default_model": "deepseek-chat",
     },
+    "siliconflow": {
+        "name": "硅基流动",
+        "base_url": "https://api.siliconflow.cn/v1",
+        "default_model": "Pro/deepseek-ai/DeepSeek-V3",
+    },
 }
 
 
@@ -40,14 +45,13 @@ def load_config():
         import tomllib
         with open(cfg_path, "rb") as f:
             data = tomllib.load(f)
-            provider = data.get("provider", "stepfun")
-            if provider not in PROVIDER_CONFIGS:
-                provider = "stepfun"
             return {
-                "provider": provider,
+                "provider": data.get("provider", "stepfun"),
                 "api_key": data.get("api_key", ""),
                 "icon_size": data.get("icon_size", 100),
                 "popup_width": data.get("popup_width", 420),
+                "custom_base_url": data.get("custom_base_url", ""),
+                "custom_model": data.get("custom_model", ""),
             }
     except FileNotFoundError:
         default = {"provider": "stepfun", "api_key": "", "icon_size": 100, "popup_width": 420}
@@ -65,6 +69,10 @@ def _save_config(cfg):
             f.write(f'api_key = "{cfg.get("api_key", "")}"\n')
             f.write(f'icon_size = {cfg.get("icon_size", 100)}\n')
             f.write(f'popup_width = {cfg.get("popup_width", 420)}\n')
+            if cfg.get("custom_base_url"):
+                f.write(f'custom_base_url = "{cfg["custom_base_url"]}"\n')
+            if cfg.get("custom_model"):
+                f.write(f'custom_model = "{cfg["custom_model"]}"\n')
     except Exception:
         pass
 
@@ -86,22 +94,33 @@ class AIClient(QNetworkAccessManager):
 
     response_ready = pyqtSignal(str)
 
-    def __init__(self, provider, api_key):
+    def __init__(self, config):
         super().__init__()
-        self._provider = provider
-        self._api_key = api_key
+        self._config = config
         self._messages = []
 
     @property
+    def _provider(self):
+        return self._config.get("provider", "stepfun")
+
+    @property
+    def _api_key(self):
+        return self._config.get("api_key", "")
+
+    @property
     def _cfg(self):
+        if self._provider == "custom":
+            return {
+                "base_url": self._config.get("custom_base_url", ""),
+                "default_model": self._config.get("custom_model", ""),
+            }
         return PROVIDER_CONFIGS.get(self._provider, PROVIDER_CONFIGS["stepfun"])
 
     def set_system_prompt(self, prompt):
         self._messages = [{"role": "system", "content": prompt}]
 
-    def update(self, provider, api_key):
-        self._provider = provider
-        self._api_key = api_key
+    def update(self, config):
+        self._config = config
         self._messages = [self._messages[0]] if self._messages else []
 
     def send_message(self, user_message):
@@ -151,7 +170,7 @@ def main():
     window = EdgeFloatingBlock()
 
     config = load_config()
-    ai = AIClient(config.get("provider", "stepfun"), config.get("api_key", ""))
+    ai = AIClient(config)
     ai.set_system_prompt(window.SYSTEM_PROMPT)
     window.set_ai_client(ai, config)
 
