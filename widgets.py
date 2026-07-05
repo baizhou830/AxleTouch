@@ -1,6 +1,7 @@
 import random
 from datetime import datetime
 import os
+import sys
 from pathlib import Path
 
 import base64
@@ -14,7 +15,10 @@ from PyQt5.QtCore import (Qt, QPoint, QRectF, QPropertyAnimation,
 from PyQt5.QtGui import (QPainter, QBrush, QColor, QPen, QPainterPath,
                           QRegion, QCursor, QFontMetrics, QPixmap)
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
+from utils import get_base_path, get_data_path
+
+current_dir = get_base_path()
+data_dir = get_data_path()
 
 
 image_path = os.path.join(current_dir, "assets", "image.svg")
@@ -453,7 +457,7 @@ class SettingsDialog(QDialog):
         self._config["api_key"] = api_key
         self._config["icon_size"] = icon_size
         self._config["popup_width"] = popup_width
-        cfg_path = os.path.join(current_dir, "config.toml")
+        cfg_path = os.path.join(data_dir, "config.toml")
         try:
             with open(cfg_path, "w", encoding="utf-8") as f:
                 f.write(f'provider = "{provider}"\n')
@@ -573,8 +577,8 @@ class EdgeFloatingBlock(QWidget):
             self._ai.send_message(text)
 
     def _log_to_json(self, text):
-        import os, json
-        log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chat_log.json")
+        import json
+        log_path = os.path.join(data_dir, "chat_log.json")
         entry = {
             "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "content": text

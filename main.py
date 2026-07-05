@@ -5,6 +5,8 @@ import os
 
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import pyqtSignal, QUrl
+
+from utils import get_base_path, get_data_path
 from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
 
 from widgets import EdgeFloatingBlock
@@ -33,7 +35,7 @@ PROVIDER_CONFIGS = {
 # 工具函数
 
 def load_config():
-    cfg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.toml")
+    cfg_path = os.path.join(get_data_path(), "config.toml")
     try:
         import tomllib
         with open(cfg_path, "rb") as f:
@@ -56,7 +58,7 @@ def load_config():
 
 
 def _save_config(cfg):
-    cfg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.toml")
+    cfg_path = os.path.join(get_data_path(), "config.toml")
     try:
         with open(cfg_path, "w", encoding="utf-8") as f:
             f.write(f'provider = "{cfg.get("provider", "stepfun")}"\n')

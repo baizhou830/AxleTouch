@@ -15,6 +15,9 @@ axle-touch = "main:main"
 [tool.uv]
 constraint-dependencies = ["pyqt5-qt5<=5.15.2"]
 
+[dependency-groups]
+dev = ["pyinstaller"]
+
 [[tool.uv.index]]
 url = "https://pypi.mirrors.ustc.edu.cn/simple/"
 default = true

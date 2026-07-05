@@ -23,8 +23,8 @@
 ## 快速开始
 
 ```bash
-# 1. 安装依赖
-uv sync
+# 1. 同步依赖（如遇 SSL 证书错误，加 --system-certs）
+uv sync --system-certs
 
 # 2. 运行
 uv run axle-touch
@@ -35,7 +35,7 @@ uv run axle-touch
 
 ## 配置文件
 
-首次启动自动生成 `config.toml`，也可通过 GUI 设置界面修改：
+首次启动自动在 exe 同目录下生成 `config.toml`，也可通过 GUI 设置界面修改：
 
 ```toml
 provider = "stepfun"
@@ -47,6 +47,22 @@ api_key = ""
 | 阶跃星辰 | `stepfun` | [platform.stepfun.com](https://platform.stepfun.com) |
 | 阿里百炼 | `bailian` | [bailian.console.aliyun.com](https://bailian.console.aliyun.com) |
 | DeepSeek | `deepseek` | [platform.deepseek.com](https://platform.deepseek.com) |
+
+## 打包为单文件 exe
+
+可使用 PyInstaller 打包为单文件 exe，无需 Python 环境即可运行。
+
+```bash
+# 使用 uv 打包（推荐）
+uv run --system-certs build.py
+
+# 或直接使用 Python
+python build.py
+```
+
+打包后的 `AxleTouch.exe` 位于 `dist/` 目录下（约 38 MB），exe 自带图标。
+
+> `assets/` 目录已内嵌到 exe 中，`config.toml` 首次运行会自动在 exe 同目录下生成。
 
 ## 依赖
 
