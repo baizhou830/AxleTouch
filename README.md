@@ -14,10 +14,12 @@
 - **AI 对话** — 单击桌宠弹出输入框，AI 回复以气泡形式展示
 - **定时问候** — 定时获取当前窗口状态并主动发起对话
 - **图片识别** — 拖拽图片到输入框可发送图片进行识别
-- **多模型支持** — 支持以下 AI 厂商：
-  - **阶跃星辰** (`step-3.7-flash`)
-  - **阿里百炼** (`qwen-turbo`)
-  - **DeepSeek** (`deepseek-chat`)
+- **多模型支持** — 支持以下 AI 厂商，也可自定义任意兼容 OpenAI API 的厂商（设置中需填写模型名称）：
+  - **阶跃星辰**
+  - **阿里百炼**
+  - **DeepSeek**
+  - **硅基流动**
+- **自定义 Prompt** — 右键菜单可编辑 AI 角色设定（System Prompt）
 - **右键菜单** — 右键桌宠可打开 GUI 设置或退出程序
 
 ## 快速开始
@@ -30,7 +32,7 @@ uv sync
 uv run python main.py
 
 # 首次启动会自动生成 config.toml
-# 右键桌宠 → 配置文件设置，选择厂商并填入 API Key
+# 右键桌宠 → 配置文件设置，选择厂商、填写 API Key 和模型名称
 ```
 
 ## 配置文件
@@ -39,6 +41,7 @@ uv run python main.py
 
 ```toml
 provider = "stepfun"
+model = ""
 api_key = ""
 ```
 

@@ -27,7 +27,7 @@ PROVIDER_CONFIGS = {
     "deepseek": {
         "name": "DeepSeek",
         "base_url": "https://api.deepseek.com/v1",
-        "default_model": "deepseek-chat",
+        "default_model": "deepseek-v4-flash",
     },
     "siliconflow": {
         "name": "硅基流动",
@@ -48,17 +48,17 @@ def load_config():
             return {
                 "provider": data.get("provider", "stepfun"),
                 "api_key": data.get("api_key", ""),
+                "model": data.get("model", ""),
                 "icon_size": data.get("icon_size", 100),
                 "popup_width": data.get("popup_width", 420),
                 "custom_base_url": data.get("custom_base_url", ""),
-                "custom_model": data.get("custom_model", ""),
             }
     except FileNotFoundError:
-        default = {"provider": "stepfun", "api_key": "", "icon_size": 100, "popup_width": 420}
+        default = {"provider": "stepfun", "api_key": "", "model": "", "icon_size": 100, "popup_width": 420}
         _save_config(default)
         return default
     except Exception:
-        return {"provider": "stepfun", "api_key": "", "icon_size": 100, "popup_width": 420}
+        return {"provider": "stepfun", "api_key": "", "model": "", "icon_size": 100, "popup_width": 420}
 
 
 def _save_config(cfg):
@@ -67,12 +67,11 @@ def _save_config(cfg):
         with open(cfg_path, "w", encoding="utf-8") as f:
             f.write(f'provider = "{cfg.get("provider", "stepfun")}"\n')
             f.write(f'api_key = "{cfg.get("api_key", "")}"\n')
+            f.write(f'model = "{cfg.get("model", "")}"\n')
             f.write(f'icon_size = {cfg.get("icon_size", 100)}\n')
             f.write(f'popup_width = {cfg.get("popup_width", 420)}\n')
             if cfg.get("custom_base_url"):
                 f.write(f'custom_base_url = "{cfg["custom_base_url"]}"\n')
-            if cfg.get("custom_model"):
-                f.write(f'custom_model = "{cfg["custom_model"]}"\n')
     except Exception:
         pass
 
@@ -112,9 +111,13 @@ class AIClient(QNetworkAccessManager):
         if self._provider == "custom":
             return {
                 "base_url": self._config.get("custom_base_url", ""),
-                "default_model": self._config.get("custom_model", ""),
+                "default_model": self._config.get("model", ""),
             }
-        return PROVIDER_CONFIGS.get(self._provider, PROVIDER_CONFIGS["stepfun"])
+        cfg = PROVIDER_CONFIGS.get(self._provider, PROVIDER_CONFIGS["stepfun"]).copy()
+        model = self._config.get("model")
+        if model:
+            cfg["default_model"] = model
+        return cfg
 
     def set_system_prompt(self, prompt):
         self._messages = [{"role": "system", "content": prompt}]
@@ -171,7 +174,7 @@ def main():
 
     config = load_config()
     ai = AIClient(config)
-    ai.set_system_prompt(window.SYSTEM_PROMPT)
+    ai.set_system_prompt(EdgeFloatingBlock.load_prompt())
     window.set_ai_client(ai, config)
 
     window.show()

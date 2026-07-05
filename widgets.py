@@ -9,7 +9,8 @@ import base64
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
                               QLineEdit, QPushButton, QLabel, QApplication,
                               QMenu, QAction, QDialog, QFormLayout,
-                              QDialogButtonBox, QComboBox, QSpinBox)
+                              QDialogButtonBox, QComboBox, QSpinBox,
+                              QPlainTextEdit)
 from PyQt5.QtCore import (Qt, QPoint, QRectF, QPropertyAnimation,
                            QEasingCurve, QTimer, pyqtSignal, QElapsedTimer)
 from PyQt5.QtGui import (QPainter, QBrush, QColor, QPen, QPainterPath,
@@ -354,14 +355,22 @@ PROVIDER_OPTIONS = [
 class SettingsDialog(QDialog):
     config_saved = pyqtSignal(dict)
 
+    # 各厂商的默认模型
+    PROVIDER_DEFAULT_MODELS = {
+        "deepseek": "deepseek-v4-flash",
+    }
+
     def __init__(self, config, parent=None):
         super().__init__(parent)
         self._config = config.copy()
         self.setWindowTitle("设置")
-        self.setFixedSize(420, 360)
+        self.setFixedSize(420, 400)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
         self.setAttribute(Qt.WA_TranslucentBackground, False)
         self.init_ui()
+
+    def _get_default_model(self, provider):
+        return self.PROVIDER_DEFAULT_MODELS.get(provider, "")
 
     def init_ui(self):
         layout = QVBoxLayout(self)
@@ -384,6 +393,13 @@ class SettingsDialog(QDialog):
         self._api_key_edit.setPlaceholderText("输入 API Key")
         form.addRow("API Key:", self._api_key_edit)
 
+        # 模型名称（所有厂商都需要填写）
+        saved_model = self._config.get("model", "")
+        default_model = self._get_default_model(current_provider)
+        self._model_edit = QLineEdit(saved_model or default_model)
+        self._model_edit.setPlaceholderText("必填，如 gpt-4o")
+        form.addRow("模型名称:", self._model_edit)
+
         self._icon_size_spin = QSpinBox(self)
         self._icon_size_spin.setRange(50, 300)
         self._icon_size_spin.setValue(self._config.get("icon_size", 100))
@@ -398,7 +414,7 @@ class SettingsDialog(QDialog):
 
         layout.addLayout(form)
 
-        # 自定义厂商区域（接口地址 + 模型名称）
+        # 自定义厂商区域（仅接口地址）
         self._custom_group = QWidget(self)
         custom_layout = QFormLayout(self._custom_group)
         custom_layout.setContentsMargins(0, 0, 0, 0)
@@ -406,9 +422,6 @@ class SettingsDialog(QDialog):
         self._custom_url_edit = QLineEdit(self._config.get("custom_base_url", ""))
         self._custom_url_edit.setPlaceholderText("https://api.example.com/v1")
         custom_layout.addRow("接口地址:", self._custom_url_edit)
-        self._custom_model_edit = QLineEdit(self._config.get("custom_model", ""))
-        self._custom_model_edit.setPlaceholderText("model-name")
-        custom_layout.addRow("模型名称:", self._custom_model_edit)
         self._custom_group.setVisible(current_provider == "custom")
         layout.addWidget(self._custom_group)
 
@@ -418,53 +431,122 @@ class SettingsDialog(QDialog):
         layout.addWidget(buttons)
 
     def _on_provider_changed(self, idx):
+        provider = self._provider_combo.currentData()
         pname = self._provider_combo.currentText()
-        is_custom = self._provider_combo.currentData() == "custom"
+        is_custom = provider == "custom"
         self._api_key_edit.setPlaceholderText(f"输入 {pname} API Key")
         self._custom_group.setVisible(is_custom)
+        # 切换厂商时，如果模型名称为空则填入默认值
+        current_model = self._model_edit.text().strip()
+        default = self._get_default_model(provider)
+        if not current_model or current_model == self._get_default_model(self._config.get("provider", "")):
+            self._model_edit.setText(default)
         if is_custom:
-            self.setFixedSize(420, 420)
+            self.setFixedSize(420, 460)
         else:
-            self.setFixedSize(420, 360)
+            self.setFixedSize(420, 400)
 
     def _on_save(self):
         provider = self._provider_combo.currentData()
         api_key = self._api_key_edit.text().strip()
+        model = self._model_edit.text().strip()
+        if not model:
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "提示", "请填写模型名称")
+            return
         icon_size = self._icon_size_spin.value()
         popup_width = self._popup_width_spin.value()
         self._config["provider"] = provider
         self._config["api_key"] = api_key
+        self._config["model"] = model
         self._config["icon_size"] = icon_size
         self._config["popup_width"] = popup_width
         if provider == "custom":
             self._config["custom_base_url"] = self._custom_url_edit.text().strip()
-            self._config["custom_model"] = self._custom_model_edit.text().strip()
         cfg_path = os.path.join(data_dir, "config.toml")
         try:
             with open(cfg_path, "w", encoding="utf-8") as f:
                 f.write(f'provider = "{provider}"\n')
                 f.write(f'api_key = "{api_key}"\n')
+                f.write(f'model = "{model}"\n')
                 f.write(f'icon_size = {icon_size}\n')
                 f.write(f'popup_width = {popup_width}\n')
-                if provider == "custom":
+                if provider == "custom" and self._config.get("custom_base_url"):
                     f.write(f'custom_base_url = "{self._config["custom_base_url"]}"\n')
-                    f.write(f'custom_model = "{self._config["custom_model"]}"\n')
         except Exception:
             pass
         self.config_saved.emit(self._config)
         self.accept()
 
 
+class PromptDialog(QDialog):
+    def __init__(self, prompt_text, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Prompt 设置")
+        self.setFixedSize(500, 400)
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(12)
+        layout.addWidget(QLabel("编辑 AI 角色设定（System Prompt）："))
+        self._editor = QPlainTextEdit(self)
+        self._editor.setPlainText(prompt_text)
+        self._editor.setPlaceholderText("在此输入自定义 Prompt...")
+        layout.addWidget(self._editor)
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def get_prompt(self):
+        return self._editor.toPlainText().strip()
+
+
 class EdgeFloatingBlock(QWidget):
 
-    SYSTEM_PROMPT = (
-        "以下是你的设定"
-        "你是雨竹，一个猫娘，你的主要任务是像一个贴心的女儿(不是真的女儿，不要叫用户父亲)一样撒娇"
-        "语气请带撒娇，可爱，温柔，可使用ww，~，（不是，哇~，等词汇(可多使用'~')"
-        "每句话尽量控制在25字以内。"
-        "不要过多使用emoji。语言模式不要过于AI，不要过多热情。"
-        "以下是用户的一些状态："
-    )
+    PROMPT_DIR = "prompt"
+    PROMPT_FILE = "custom_prompt.txt"
+
+    @staticmethod
+    def default_prompt():
+        try:
+            base = get_base_path()
+            path = os.path.join(base, EdgeFloatingBlock.PROMPT_DIR, "yuzhu.prompt")
+            if os.path.isfile(path):
+                with open(path, "r", encoding="utf-8") as f:
+                    return f.read().strip()
+        except Exception:
+            pass
+        return (
+            "以下是你的设定"
+            "你是雨竹，一个猫娘，你的主要任务是像一个贴心的女儿(不是真的女儿，不要叫用户父亲)一样撒娇"
+            "语气请带撒娇，可爱，温柔，可使用ww，~，（不是，哇~，等词汇(可多使用'~')"
+            "每句话尽量控制在25字以内。"
+            "不要过多使用emoji。语言模式不要过于AI，不要过多热情。"
+            "以下是用户的一些状态："
+        )
+
+    @staticmethod
+    def load_prompt():
+        """加载 prompt，优先读取用户自定义文件"""
+        custom_path = os.path.join(data_dir, EdgeFloatingBlock.PROMPT_DIR, EdgeFloatingBlock.PROMPT_FILE)
+        if os.path.isfile(custom_path):
+            try:
+                with open(custom_path, "r", encoding="utf-8") as f:
+                    return f.read().strip()
+            except Exception:
+                pass
+        return EdgeFloatingBlock.default_prompt()
+
+    @staticmethod
+    def save_prompt(text):
+        path = os.path.join(data_dir, EdgeFloatingBlock.PROMPT_DIR, EdgeFloatingBlock.PROMPT_FILE)
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(text)
+        except Exception:
+            pass
 
     def __init__(self):
         super().__init__()
@@ -678,6 +760,10 @@ class EdgeFloatingBlock(QWidget):
         settings_action.triggered.connect(self._open_settings)
         menu.addAction(settings_action)
 
+        prompt_action = QAction("Prompt 设置", self)
+        prompt_action.triggered.connect(self._open_prompt_dialog)
+        menu.addAction(prompt_action)
+
         menu.addSeparator()
 
         exit_action = QAction("退出", self)
@@ -690,6 +776,15 @@ class EdgeFloatingBlock(QWidget):
         dialog = SettingsDialog(self._config or {}, self)
         dialog.config_saved.connect(self._on_config_saved)
         dialog.exec_()
+
+    def _open_prompt_dialog(self):
+        current = self.load_prompt()
+        dialog = PromptDialog(current, self)
+        if dialog.exec_() == QDialog.Accepted:
+            text = dialog.get_prompt()
+            self.save_prompt(text)
+            if self._ai:
+                self._ai.set_system_prompt(text)
 
     def _on_config_saved(self, config):
         self._config = config
