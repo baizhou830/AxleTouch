@@ -48,6 +48,7 @@ api_key = ""
 | 阿里百炼 | `bailian` | [bailian.console.aliyun.com](https://bailian.console.aliyun.com) |
 | DeepSeek | `deepseek` | [platform.deepseek.com](https://platform.deepseek.com) |
 | 硅基流动 | `siliconflow` | [siliconflow.cn](https://siliconflow.cn) |
+| RinkoAI | `rinkoai` | [rinko.ai](https://api.rinko.ai/) |
 | 自定义 | `custom` | 自行填写接口地址和模型名称 |
 
 ## 打包为单文件 exe

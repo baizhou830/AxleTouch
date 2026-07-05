@@ -347,6 +347,7 @@ PROVIDER_OPTIONS = [
     ("bailian", "阿里百炼"),
     ("deepseek", "DeepSeek"),
     ("siliconflow", "硅基流动"),
+    ("rinkoai", "RinkoAI"),
     ("custom", "自定义"),
 ]
 
