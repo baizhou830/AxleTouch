@@ -3,7 +3,7 @@ from datetime import datetime
 import os
 import sys
 from pathlib import Path
-
+from config_manager import save_config
 import base64
 
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
@@ -462,21 +462,13 @@ class SettingsDialog(QDialog):
         icon_size = self._icon_size_spin.value()
         popup_width = self._popup_width_spin.value()
         prompt = self._prompt_edit.text().strip()
+    
         self._config["provider"] = provider
         self._config["api_key"] = api_key
         self._config["icon_size"] = icon_size
         self._config["popup_width"] = popup_width
         self._config["prompt"] = prompt
-        cfg_path = os.path.join(data_dir, "config.toml")
-        try:
-            with open(cfg_path, "w", encoding="utf-8") as f:
-                f.write(f'provider = "{provider}"\n')
-                f.write(f'api_key = "{api_key}"\n')
-                f.write(f'icon_size = {icon_size}\n')
-                f.write(f'popup_width = {popup_width}\n')
-                f.write(f'prompt = "{prompt}"\n')
-        except Exception:
-            pass
+        save_config(self._config)
         self.config_saved.emit(self._config)
         self.accept()
 

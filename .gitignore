@@ -19,5 +19,5 @@ env/
 *.swo
 
 # Project runtime
-config.toml
+config.json
 chat_log.json
