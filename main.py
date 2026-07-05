@@ -68,7 +68,6 @@ class StepFunClient(QNetworkAccessManager):
         req = QNetworkRequest(QUrl(f"{self._base_url}/chat/completions"))
         req.setHeader(QNetworkRequest.ContentTypeHeader, "application/json")
         req.setRawHeader(b"Authorization", f"Bearer {self._api_key}".encode())
-
         reply = self.post(req, raw)
         reply.finished.connect(lambda r=reply: self._on_reply(r))
 
@@ -83,7 +82,6 @@ class StepFunClient(QNetworkAccessManager):
             data = json.loads(raw)
             content = data["choices"][0]["message"]["content"]
             self._messages.append({"role": "assistant", "content": content})
-
             self.response_ready.emit(content)
         except Exception as e:
             self.response_ready.emit(f"呜...解析失败: {e}")

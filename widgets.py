@@ -1,6 +1,9 @@
 import random
 from datetime import datetime
 import os
+from pathlib import Path
+
+import base64
 
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
                               QLineEdit, QPushButton, QLabel, QApplication)
@@ -199,10 +202,13 @@ class ContentBar(QWidget):
 class InputPopup(QWidget):
 
     submitted = pyqtSignal(str)
+    image = pyqtSignal(str)
+    not_image = pyqtSignal()
 
     def __init__(self, parent_floating):
         super().__init__()
         self._parent = parent_floating
+        self.setAcceptDrops(True)
         self.init_ui()
 
     def init_ui(self):
@@ -306,6 +312,22 @@ class InputPopup(QWidget):
         self.hide()
         self._edit.clear()
 
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()  
+
+    def dropEvent(self, event):
+        urls = event.mimeData().urls()
+        if urls:
+            file_path = urls[0].toLocalFile()
+            if file_path.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
+                with open(file_path, "rb") as image_file:
+                    base64_bytes = base64.b64encode(image_file.read()).decode('utf-8')
+                    image_data = f"data:image/{Path(file_path).suffix[1:].lower()};base64,{base64_bytes}"
+                    self.image.emit(image_data)
+            else:
+                self.not_image.emit()
+
 
 
 
@@ -336,6 +358,10 @@ class EdgeFloatingBlock(QWidget):
 
         self._input_popup = InputPopup(self)
         self._input_popup.submitted.connect(self._on_input_submitted)
+        self._input_popup.not_image.connect(self._not_image)
+        self._input_popup.image.connect(self._image)
+        
+
 
         self._content_bar = ContentBar(self)
 
@@ -523,3 +549,16 @@ class EdgeFloatingBlock(QWidget):
         path = QPainterPath()
         path.addRoundedRect(QRectF(self.rect()), 18, 18)
         self.setMask(QRegion(path.toFillPolygon().toPolygon()))
+
+    def _not_image(self):
+        self._content_bar.show_content("不是图片文件，拖进来也没用ww")
+
+    def _image(self,data):
+        print(" -----[ user input ]----- ", "\n",
+              "[", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "]", "\n",
+              "\"", "图片", "\"")
+        data = [
+        {"type": "image_url", "image_url": {"url": data,"detail":"high"}}
+    ]
+        if self._ai:
+            self._ai.send_message(data)
