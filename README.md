@@ -48,6 +48,23 @@ api_key = ""
 | 阿里百炼 | `bailian` | [bailian.console.aliyun.com](https://bailian.console.aliyun.com) |
 | DeepSeek | `deepseek` | [platform.deepseek.com](https://platform.deepseek.com) |
 
+## 打包为 exe
+
+可使用 PyInstaller 打包为单文件 exe，无需 Python 环境即可运行。
+
+```bash
+# 安装 PyInstaller
+pip install pyinstaller
+
+# 执行打包
+python build.py
+```
+
+打包后的 `AxleTouch.exe` 位于 `dist/` 目录下（约 8 MB）。
+
+> **注意**：`config.toml`（API Key 等配置）需放在 exe 同目录下，首次运行会自动生成。
+> `assets/` 目录已内嵌到 exe 中，无需额外复制。
+
 ## 依赖
 
 - Python 3.8+

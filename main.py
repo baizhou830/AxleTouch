@@ -4,6 +4,20 @@ import ctypes
 import os
 
 from PyQt5.QtWidgets import QApplication
+
+
+def get_base_path():
+    """获取资源文件路径（打包后取 _MEIPASS，源码运行取脚本目录）"""
+    if getattr(sys, 'frozen', False):
+        return sys._MEIPASS
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+def get_data_path():
+    """获取用户数据文件路径（exe 所在目录或脚本目录）"""
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
 from PyQt5.QtCore import pyqtSignal, QUrl
 from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
 
@@ -33,7 +47,7 @@ PROVIDER_CONFIGS = {
 # 工具函数
 
 def load_config():
-    cfg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.toml")
+    cfg_path = os.path.join(get_data_path(), "config.toml")
     try:
         import tomllib
         with open(cfg_path, "rb") as f:
@@ -56,7 +70,7 @@ def load_config():
 
 
 def _save_config(cfg):
-    cfg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.toml")
+    cfg_path = os.path.join(get_data_path(), "config.toml")
     try:
         with open(cfg_path, "w", encoding="utf-8") as f:
             f.write(f'provider = "{cfg.get("provider", "stepfun")}"\n')
