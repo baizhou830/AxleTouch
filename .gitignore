@@ -21,3 +21,4 @@ env/
 # Project runtime
 config.toml
 chat_log.json
+prompt/custom_prompt.txt
