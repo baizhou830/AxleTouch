@@ -20,8 +20,17 @@
   - **DeepSeek** (`deepseek-chat`)
 - **右键菜单** — 右键桌宠可打开 GUI 设置或退出程序
 
-## 快速开始
+## 安装与运行
 
+### 快速开始
+
+ **EXE打包版本**: 
+ [Releases 页面](https://github.com/baizhou830/AxleTouch/releases)
+直接下载 `AxleTouch.zip`，解压后双击其中的exe即可。
+
+---
+
+### 二次开发/调试
 ```bash
 # 1. 同步依赖（如遇 SSL 证书错误，加 --system-certs）
 uv sync --system-certs
@@ -48,21 +57,7 @@ api_key = ""
 | 阿里百炼 | `bailian` | [bailian.console.aliyun.com](https://bailian.console.aliyun.com) |
 | DeepSeek | `deepseek` | [platform.deepseek.com](https://platform.deepseek.com) |
 
-## 打包为单文件 exe.
 
-考虑到release分发的下载速度问题以及可扩展性 因此，提供build脚本用于用户本地打包。
-
-```bash
-# 使用 uv 打包（推荐）
-uv run --system-certs build.py
-
-# 或直接使用 Python
-python build.py
-```
-
-打包后的 `AxleTouch.exe` 位于 `dist/` 目录下（约 38 MB），exe 自带图标。
-
-> `assets/` 目录已内嵌到 exe 中，`config.toml` 首次运行会自动在 exe 同目录下生成。
 
 ## 依赖
 

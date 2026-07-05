@@ -21,3 +21,4 @@ env/
 # Project runtime
 config.json
 chat_log.json
+tools/
