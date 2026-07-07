@@ -35,9 +35,6 @@ PROVIDER_CONFIGS = {
 
 # 工具函数
 
-
-
-
 def get_active_window_title():
     """获取当前活动窗口标题"""
     try:
