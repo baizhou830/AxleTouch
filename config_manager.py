@@ -23,9 +23,8 @@ DEFAULT_CONFIG = {
 }
 
 def load_config():
-    os.makedirs(DATA_DIR, exist_ok=True)
     
-
+    os.makedirs(DATA_DIR, exist_ok=True)
     if not os.path.exists(CONFIG_PATH):
         with open(CONFIG_PATH, "w", encoding="utf-8") as f:
             json.dump(DEFAULT_CONFIG, f, ensure_ascii=False, indent=2)
