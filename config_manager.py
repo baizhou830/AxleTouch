@@ -1,7 +1,7 @@
 import os
 import json
 import shutil
-from utils import get_data_path
+from tools import get_data_path
 
 DATA_DIR = get_data_path()
 CONFIG_PATH = os.path.join(DATA_DIR, "config.json")

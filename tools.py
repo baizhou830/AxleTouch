@@ -1,8 +1,21 @@
 import ctypes
 import os
 from datetime import datetime
-from utils import get_data_path
 import json
+import sys
+import os
+
+
+def get_base_path():
+    if getattr(sys, 'frozen', False):
+        return sys._MEIPASS
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+def get_data_path():
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
 
 data_dir = get_data_path()
 
