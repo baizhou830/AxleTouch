@@ -6,6 +6,8 @@ from pathlib import Path
 from config_manager import save_config,load_config
 import base64
 
+from schedule import Poller
+
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
                               QLineEdit, QPushButton, QLabel, QApplication,
                               QMenu, QAction, QDialog, QFormLayout,
@@ -515,18 +517,21 @@ class EdgeFloatingBlock(QWidget):
         self._ai = None
         self._config = None
 
-        self._periodic_timer = QTimer(self)
-        self._periodic_timer.setSingleShot(True)
-        self._periodic_timer.timeout.connect(self._periodic_trigger)
+        self._poller = Poller(self) 
+        self._poller.status_ready.connect(self._on_poller_status)
 
         self.init_ui()
+
+    def _on_poller_status(self, status_text):
+        if self._ai:
+            self._ai.send_message(status_text)
 
     def set_ai_client(self, client, config=None):
         self._ai = client
         self._config = config or {}
         self._ai.response_ready.connect(self._on_ai_response)
         self._apply_size_config()
-        self._schedule_next_periodic()
+
 
     def _apply_size_config(self):
         icon_size = self._config.get("icon_size", 100)
@@ -545,19 +550,6 @@ class EdgeFloatingBlock(QWidget):
         else:
             self.move(screen.width() - icon_size, self.y())
 
-    def _schedule_next_periodic(self):
-        interval_ms = random.randint(30, 100) * 1000
-        self._periodic_timer.start(interval_ms)
-
-    def _periodic_trigger(self):
-        from tools import get_active_window_title
-        window_title = get_active_window_title()
-        now = datetime.now().strftime("%H:%M")
-        status = f"当前时间: {now}，用户正在使用: {window_title}"
-        print(" -----[ scheduled polling results ]----- ")
-        if self._ai:
-            self._ai.send_message(status)
-        self._schedule_next_periodic()
 
     def _on_ai_response(self, text):
         self._content_bar.show_content(text)
