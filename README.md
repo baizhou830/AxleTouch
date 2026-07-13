@@ -44,17 +44,23 @@ uv sync --system-certs
 # 2. 运行
 uv run axle-touch
 
-# 首次启动会自动生成 config.toml
+# 首次启动会自动生成 config.json
 # 右键桌宠 → 配置文件设置，选择厂商并填入 API Key
 ```
 
 ## 配置文件
 
-首次启动自动在 exe 同目录下生成 `config.toml`，也可通过 GUI 设置界面修改：
+首次启动自动在 exe 同目录下生成 `config.json`，也可通过 GUI 设置界面修改：
 
-```toml
-provider = "stepfun"
-api_key = ""
+```json
+{
+    "provider": "stepfun",
+    "api_key": "",
+    "tavily_api_key": "",   
+    "icon_size": 100,
+    "popup_width": 420,
+    "prompt": DEFAULT_PROMPT,
+}
 ```
 
 | 厂商 | provider 值 | 获取 API Key |
