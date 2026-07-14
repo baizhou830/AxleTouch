@@ -1,7 +1,5 @@
-import random
 from datetime import datetime
 import os
-import sys
 from pathlib import Path
 from config_manager import save_config,load_config
 import base64
