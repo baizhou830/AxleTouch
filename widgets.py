@@ -1,10 +1,14 @@
 from datetime import datetime
+
 import os
+import tempfile
+import winsound
 from pathlib import Path
 from config_manager import save_config,load_config
 import base64
 
 from schedule import Poller
+from tts import TTSThread
 
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
                               QLineEdit, QPushButton, QLabel, QApplication,
@@ -65,7 +69,9 @@ class ContentBar(QWidget):
         self._elapsed.start()
         self._progress_timer.start()
         self._show_animated()
-        QTimer.singleShot(5000, self._hide_animated)
+        show_time = min(len(text) + 1, 25)
+        show_time = max(show_time, 3)
+        QTimer.singleShot(show_time*1000, self._hide_animated)
 
     def _tick_progress(self):
         elapsed_ms = self._elapsed.elapsed()
@@ -399,7 +405,7 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self._config = config.copy()
         self.setWindowTitle("设置")
-        self.setFixedSize(420, 340)
+        self.setFixedSize(420, 380)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
         self.setAttribute(Qt.WA_TranslucentBackground, False)
         self.init_ui()
@@ -431,6 +437,11 @@ class SettingsDialog(QDialog):
         self._tavily_key_edit.setStyleSheet(INPUT_STYLE)
         self._tavily_key_edit.setPlaceholderText("输入 Tavily API Key（可留空）")
         form.addRow(self._label("Tavily Key:"), self._tavily_key_edit)
+
+        self._tts_key_edit = QLineEdit(self._config.get("tts_api_key", ""))
+        self._tts_key_edit.setStyleSheet(INPUT_STYLE)
+        self._tts_key_edit.setPlaceholderText("输入 StepFun TTS API Key（可留空）")
+        form.addRow(self._label("TTS Key:"), self._tts_key_edit)
 
         self._icon_size_spin = QSpinBox(self)
         self._icon_size_spin.setStyleSheet(SPIN_STYLE)
@@ -468,6 +479,7 @@ class SettingsDialog(QDialog):
         provider = self._provider_combo.currentData()
         api_key = self._api_key_edit.text().strip()
         tavily_api_key = self._tavily_key_edit.text().strip()
+        tts_api_key = self._tts_key_edit.text().strip()
         icon_size = self._icon_size_spin.value()
         popup_width = self._popup_width_spin.value()
         prompt = self._prompt_edit.text().strip()
@@ -475,6 +487,7 @@ class SettingsDialog(QDialog):
         self._config["provider"] = provider
         self._config["api_key"] = api_key
         self._config["tavily_api_key"] = tavily_api_key
+        self._config["tts_api_key"] = tts_api_key
         self._config["icon_size"] = icon_size
         self._config["popup_width"] = popup_width
         self._config["prompt"] = prompt
@@ -510,7 +523,6 @@ class EdgeFloatingBlock(QWidget):
         self._input_popup.not_image.connect(self._not_image)
         self._input_popup.image.connect(self._image)
         self._input_popup.no_vlm.connect(self._no_vlm)
-        
 
 
         self._content_bar = ContentBar(self)
@@ -561,6 +573,27 @@ class EdgeFloatingBlock(QWidget):
         print("[", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "]", "\n",
               "雨竹：", "\"", text, "\"", "\n")
         _log_to_json(text)
+
+        tts_api_key = self._config.get("tts_api_key", "") if self._config else ""
+        if tts_api_key:
+            tts_text = text.replace("[web search]", "").strip()
+            if tts_text:
+                self._tts_thread = TTSThread(tts_api_key, tts_text)
+                self._tts_thread.audio_ready.connect(self._on_tts_audio_ready)
+                self._tts_thread.error_occurred.connect(self._on_tts_error)
+                self._tts_thread.start()
+
+    def _on_tts_audio_ready(self, audio_data):
+        temp_path = os.path.join(tempfile.gettempdir(), "axletouch_tts.wav")
+        try:
+            with open(temp_path, "wb") as f:
+                f.write(audio_data)
+            winsound.PlaySound(temp_path, winsound.SND_FILENAME | winsound.SND_ASYNC)
+        except Exception as e:
+            print("TTS 播放失败:", e)
+
+    def _on_tts_error(self, error_msg):
+        print("TTS 错误:", error_msg)
 
     def _on_input_submitted(self, text):
         print(" -----[ user input ]----- ", "\n",

@@ -18,7 +18,8 @@ DEFAULT_PROMPT = (
 DEFAULT_CONFIG = {
     "provider": "stepfun",
     "api_key": "",
-    "tavily_api_key": "",   
+    "tavily_api_key": "",
+    "tts_api_key": "",
     "icon_size": 100,
     "popup_width": 420,
     "prompt": DEFAULT_PROMPT,
