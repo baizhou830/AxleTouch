@@ -8,7 +8,7 @@ D_TTS_VOICE = "ruanmengnvsheng"
 TTS_MAX_CHARS = 1000
 
 config = load_config()
-TTS_VOICE  = config.get("tts-tone",D_TTS_VOICE)
+TTS_VOICE  = config.get("tts_tone",D_TTS_VOICE)
 
 
 
