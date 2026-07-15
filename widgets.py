@@ -462,6 +462,11 @@ class SettingsDialog(QDialog):
         self._prompt_edit.setPlaceholderText("自定义prompt")
         form.addRow(self._label("prompt："), self._prompt_edit)
 
+        self._tone_edit = QLineEdit(self._config.get("tts_tone",""))
+        self._tone_edit.setStyleSheet(INPUT_STYLE)
+        self._tone_edit.setPlaceholderText("自定义音色")
+        form.addRow(self._label("tone: "), self._tone_edit)
+
 
         layout.addLayout(form)
 
@@ -483,6 +488,7 @@ class SettingsDialog(QDialog):
         icon_size = self._icon_size_spin.value()
         popup_width = self._popup_width_spin.value()
         prompt = self._prompt_edit.text().strip()
+        tone = self._tone_edit.test().strip()
 
         self._config["provider"] = provider
         self._config["api_key"] = api_key
@@ -491,6 +497,7 @@ class SettingsDialog(QDialog):
         self._config["icon_size"] = icon_size
         self._config["popup_width"] = popup_width
         self._config["prompt"] = prompt
+        self._config["tone"] = tone
         save_config(self._config)
         self.config_saved.emit(self._config)
         self.accept()

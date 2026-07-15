@@ -4,7 +4,8 @@ from PyQt5.QtWidgets import QApplication
 from widgets import EdgeFloatingBlock
 from config_manager import load_config
 
-def main():
+
+if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = EdgeFloatingBlock()
     config = load_config()
@@ -13,7 +14,4 @@ def main():
     window.set_ai_client(ai, config)
     window.show()
     sys.exit(app.exec_())
-
-if __name__ == "__main__":
-    main()
 

@@ -6,6 +6,7 @@ from tools import get_data_path
 DATA_DIR = get_data_path()
 CONFIG_PATH = os.path.join(DATA_DIR, "config.json")
 
+DEFAULT_TONE = "ruanmengnvsheng"
 
 DEFAULT_PROMPT = (
     "以下是你的设定:你是雨竹，一个猫娘，你的主要任务是像一个贴心的女儿"
@@ -23,6 +24,7 @@ DEFAULT_CONFIG = {
     "icon_size": 100,
     "popup_width": 420,
     "prompt": DEFAULT_PROMPT,
+    "tts_tone": DEFAULT_TONE
 }
 
 def load_config():
