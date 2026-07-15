@@ -37,7 +37,7 @@
 ---
 
 ### 二次开发/调试
-```bash
+```cmd
 # 1. 同步依赖（如遇 SSL 证书错误，加 --system-certs）
 uv sync --system-certs
 
