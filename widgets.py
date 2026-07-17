@@ -21,7 +21,7 @@ from PyQt5.QtGui import (QPainter, QBrush, QColor, QPen, QPainterPath,
 
 from tools import _log_to_json, get_base_path, capture_screen
 from setting import (AboutPage, LLMSettingPage, TTSSettingPage,
-                     WebSearchSettingPage, VisionSettingPage)
+                     WebSearchSettingPage, VisionSettingPage,SettingPage)
 from config_manager import load_config, save_config
 from AIclient import AIClient
 
@@ -524,6 +524,7 @@ class SettingsDialog(QDialog):
         self._add_page("TTS", TTSSettingPage(self._config))
         self._add_page("搜索", WebSearchSettingPage(self._config))
         self._add_page("识图", VisionSettingPage(self._config))
+        self._add_page("通用",SettingPage(self._config))
         self.sidebar.layout().addStretch()
 
         self.sidebar_indicator = SidebarIndicator(self.sidebar)
@@ -551,7 +552,7 @@ class SettingsDialog(QDialog):
         self.sidebar_items.append(item)
         side_layout = self.sidebar.layout()
         side_layout.addWidget(item)
-        if idx < 4:
+        if idx < 5:
             div = QWidget()
             div.setFixedHeight(1)
             div.setFixedWidth(32)

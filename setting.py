@@ -1,8 +1,10 @@
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel,
                              QGroupBox, QLineEdit, QComboBox, QFormLayout,
-                             QTextEdit)
+                             QTextEdit,QMessageBox,QPushButton,QHBoxLayout)
 
 from config_manager import load_config, save_config
+
+import webbrowser
 
 
 # ---------- 共用样式 ----------
@@ -45,6 +47,15 @@ TEXT_STYLE = """
         background: white; color: #1e2026; font-size: 12px;
     }
     QTextEdit:focus { border-color: #5078f0; }
+"""
+
+ACCENT_BTN_STYLE = """
+    QPushButton {
+        background: #5078f0; color: white; border: none;
+        border-radius: 6px; padding: 6px 14px;
+        font-size: 12px; font-weight: bold;
+    }
+    QPushButton:hover { background: #6090E8; }
 """
 
 # 厂商列表（id, 显示名）
@@ -332,3 +343,51 @@ class VisionSettingPage(BaseSettingPage):
     def reload_values(self, cfg):
         self._set_vision_provider(cfg.get("vision_provider", "stepfun"))
         self._vision_key_edit.setText(cfg.get("vision_api_key", ""))
+
+
+
+
+class SettingPage(BaseSettingPage):
+    def _build(self):
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 16, 24, 16)
+        layout.setSpacing(12)
+
+        title = QLabel("通用设置")
+        title.setStyleSheet("font-size: 22px; font-weight: bold; color: #1e2026;")
+        layout.addWidget(title)
+
+        box = QGroupBox("通用")
+        box.setStyleSheet(GROUP_STYLE)
+        box_layout = QVBoxLayout(box)
+
+        hint = QLabel("在此配置部分通用设置。")
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: #787d88; font-size: 11px;")
+        box_layout.addWidget(hint)
+
+        form = QFormLayout()
+        form.setSpacing(10)
+
+
+        form.addWidget(self._label("尝试使用 QVariantAnimation 步进优化替代 pyqtProperty 驱动（实验性）："))
+        self.startup_btn = QPushButton("未启用")
+        self.startup_btn.setStyleSheet(ACCENT_BTN_STYLE)
+        self.startup_btn.clicked.connect(self.startup)
+        form.addWidget(self.startup_btn)
+
+        box_layout.addLayout(form)
+        layout.addWidget(box)
+        layout.addStretch()
+
+    def startup(self):
+        message = QMessageBox.question(None, "确认启用",
+                                     f"确定要启用该实验选项吗？\n若发生错误，目前的程序无法正确地fallback至 pyqtProperty 驱动，进而导致崩溃或异常。\n且 QVariantAnimation 所带来的优化极其有限。",
+                                     QMessageBox.Yes | QMessageBox.No)
+        if message == QMessageBox.Yes:
+            message1 = QMessageBox.question(None, "再次警告",
+                                     f"此实验性设置项可能会带来风险。可能导致 QVariantAnimation 与现有动画冲突，界面可能出现卡死或异常。",
+                                     QMessageBox.Yes | QMessageBox.No)
+            if message1 == QMessageBox.Yes:
+                url = "https://www.bilibili.com/video/BV1UT42167xb"
+                webbrowser.open(url)
