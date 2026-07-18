@@ -1160,7 +1160,7 @@ class EdgeFloatingBlock(QWidget):
                 satiety = self._satiety_level
                 desc = self._satiety_description(satiety)
                 full = (f"{text}\n"
-                        f"（系统提示：雨竹当前饱食度: {satiety}/100（{desc}）。"
+                        f"（提示：你的当前饱食度: {satiety}/100（{desc}）。"
                         f"饱食度越低，雨竹越饥饿，请在回复中体现相应状态。）")
             else:
                 full = text
@@ -1286,6 +1286,12 @@ class EdgeFloatingBlock(QWidget):
 
         menu.addSeparator()
 
+        act_action = QAction("摸摸头",self)
+        act_action.triggered.connect(self._on_action)
+        menu.addAction(act_action)
+
+        menu.addSeparator()
+
         exit_action = QAction("退出", self)
         exit_action.triggered.connect(QApplication.quit)
         menu.addAction(exit_action)
@@ -1376,6 +1382,13 @@ class EdgeFloatingBlock(QWidget):
               "[", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "]", "\n",
               "\"", f"你投喂了{food['name']}给雨竹", "\"","\n")
             self._ai.send_message(notify)
+
+    def _on_action(self):
+        action_prompt = "用户摸了摸你的头"
+        print(" -----[ Action ]----- ", "\n",
+              "[", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "]", "\n",
+              "\"", "你摸了摸雨竹的头", "\"","\n")
+        self._ai.send_message(action_prompt)
 
     def _on_vision_describe(self, description):
         self._vision_busy = False
