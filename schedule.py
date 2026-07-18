@@ -39,7 +39,6 @@ class Poller(QObject):
 
     def _trigger(self):
         from tools import get_active_window_title
-        print(self._vision_probability)
         window_title = get_active_window_title()
         now = datetime.now().strftime("%H:%M")
 
