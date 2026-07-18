@@ -12,7 +12,10 @@ from tts import TTSThread
 
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
                               QLineEdit, QPushButton, QLabel, QApplication,
-                              QMenu, QAction, QDialog, QStackedWidget)
+                              QMenu, QAction, QDialog, QStackedWidget,
+                              QProgressBar, QGridLayout, QListWidget,
+                              QListWidgetItem, QComboBox, QGroupBox,
+                              QInputDialog, QMessageBox)
 from PyQt5.QtCore import (Qt, QPoint, QRect, QRectF, QPropertyAnimation,
                            QEasingCurve, QTimer, pyqtSignal, pyqtProperty,
                            QElapsedTimer, QBuffer)
@@ -22,7 +25,7 @@ from PyQt5.QtGui import (QPainter, QBrush, QColor, QPen, QPainterPath,
 from tools import _log_to_json, get_base_path, capture_screen
 from setting import (AboutPage, LLMSettingPage, TTSSettingPage,
                      WebSearchSettingPage, VisionSettingPage,SettingPage)
-from config_manager import load_config, save_config
+from config_manager import load_config, save_config, load_foods, save_foods
 from AIclient import AIClient
 
 
@@ -648,6 +651,349 @@ class SettingsDialog(QDialog):
             painter.drawRoundedRect(side_rect, radius, radius)
 
 
+FULL_THRESHOLD = 20
+
+
+INPUT_STYLE_FEED = """
+    QLineEdit {
+        border: 1px solid #ebedf1;
+        border-radius: 6px; padding: 4px 8px;
+        background: white; color: #1e2026; font-size: 12px;
+    }
+    QLineEdit:focus { border-color: #5078f0; }
+"""
+
+COMBO_STYLE_FEED = """
+    QComboBox {
+        border: 1px solid #ebedf1;
+        border-radius: 6px; padding: 4px 8px;
+        background: white; color: #1e2026; font-size: 12px;
+    }
+    QComboBox::drop-down { border: none; }
+"""
+
+ACCENT_BTN_STYLE_FEED = """
+    QPushButton {
+        background: #5078f0; color: white; border: none;
+        border-radius: 6px; padding: 6px 14px;
+        font-size: 12px; font-weight: bold;
+    }
+    QPushButton:hover { background: #6090E8; }
+"""
+
+DANGER_BTN_STYLE_FEED = """
+    QPushButton {
+        background: #E55; color: white; border: none;
+        border-radius: 6px; padding: 6px 14px;
+        font-size: 12px; font-weight: bold;
+    }
+    QPushButton:hover { background: #D44; }
+"""
+
+LIST_STYLE_FEED = """
+    QListWidget {
+        border: 1px solid #ebedf1;
+        border-radius: 8px; background: white;
+        font-size: 12px; color: #1e2026; padding: 4px;
+    }
+    QListWidget::item {
+        padding: 8px 12px; border-bottom: 1px solid #ebedf1;
+    }
+    QListWidget::item:selected {
+        background: #ebf0ff; color: #5078f0;
+    }
+"""
+
+
+class FeedDialog(QDialog):
+    food_selected = pyqtSignal(dict)
+
+    def __init__(self, hunger_level, parent=None):
+        super().__init__(parent)
+        self._hunger_level = hunger_level
+        self._drag_pos = None
+        self.setWindowTitle("喂雨竹")
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Tool)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setFixedSize(440, 540)
+        self._foods = load_foods()
+        self.init_ui()
+
+    def init_ui(self):
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(20, 20, 20, 20)
+        outer.setSpacing(0)
+
+        top_bar = QWidget()
+        top_bar.setFixedHeight(44)
+        top_bar.setStyleSheet("background: transparent;")
+        top_layout = QHBoxLayout(top_bar)
+        top_layout.setContentsMargins(20, 0, 12, 0)
+
+        title = QLabel("喂雨竹")
+        title.setStyleSheet("font-size: 13pt; font-weight: bold; color: #1e2026;")
+        top_layout.addWidget(title)
+        top_layout.addStretch()
+
+        close_btn = QPushButton("×")
+        close_btn.setFixedSize(32, 32)
+        close_btn.setCursor(QCursor(Qt.PointingHandCursor))
+        close_btn.setStyleSheet("""
+            QPushButton {
+                background: transparent; color: #787d88;
+                border: none; border-radius: 8px;
+                font-size: 16px; font-weight: bold;
+            }
+            QPushButton:hover { background: #ebf0ff; color: #5078f0; }
+        """)
+        close_btn.clicked.connect(self.reject)
+        top_layout.addWidget(close_btn)
+        outer.addWidget(top_bar)
+
+        hunger_box = QWidget()
+        hunger_layout = QVBoxLayout(hunger_box)
+        hunger_layout.setContentsMargins(20, 8, 20, 8)
+        hunger_layout.setSpacing(8)
+
+        hunger_label_row = QHBoxLayout()
+        hunger_title = QLabel("当前饥饿度")
+        hunger_title.setStyleSheet("color: #1e2026; font-size: 12px;")
+        hunger_label_row.addWidget(hunger_title)
+        hunger_label_row.addStretch()
+        self._hunger_value_label = QLabel(f"{self._hunger_level}/100")
+        self._hunger_value_label.setStyleSheet(
+            "color: #5078f0; font-size: 12px; font-weight: bold;")
+        hunger_label_row.addWidget(self._hunger_value_label)
+        hunger_layout.addLayout(hunger_label_row)
+
+        self._hunger_bar = QProgressBar()
+        self._hunger_bar.setRange(0, 100)
+        self._hunger_bar.setValue(self._hunger_level)
+        self._hunger_bar.setTextVisible(False)
+        self._hunger_bar.setFixedHeight(8)
+        self._hunger_bar.setStyleSheet("""
+            QProgressBar {
+                background: #ebedf1; border: none; border-radius: 4px;
+            }
+            QProgressBar::chunk {
+                border-radius: 4px;
+            }
+        """)
+        self._apply_hunger_bar_color()
+        hunger_layout.addWidget(self._hunger_bar)
+
+        self._status_label = QLabel(self._status_text())
+        self._status_label.setStyleSheet("color: #787d88; font-size: 11px;")
+        hunger_layout.addWidget(self._status_label)
+        outer.addWidget(hunger_box)
+
+        div = QWidget()
+        div.setFixedHeight(1)
+        div.setStyleSheet("background: #ebedf1;")
+        outer.addWidget(div)
+
+        food_box = QGroupBox("食物列表")
+        food_box.setStyleSheet("""
+            QGroupBox {
+                border: 1px solid #ebedf1; border-radius: 8px;
+                margin-top: 12px; padding: 16px 12px 12px 12px;
+                font-size: 12px; color: #787d88;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin; left: 16px; padding: 0 6px;
+            }
+        """)
+        food_layout = QVBoxLayout(food_box)
+        food_layout.setContentsMargins(12, 16, 12, 12)
+        food_layout.setSpacing(10)
+
+        add_row = QHBoxLayout()
+        add_row.setSpacing(8)
+        self._food_name_input = QLineEdit()
+        self._food_name_input.setPlaceholderText("食物名称")
+        self._food_name_input.setStyleSheet(INPUT_STYLE_FEED)
+        add_row.addWidget(self._food_name_input, stretch=2)
+
+        self._food_amount_input = QLineEdit()
+        self._food_amount_input.setPlaceholderText("饱腹度")
+        self._food_amount_input.setFixedWidth(60)
+        self._food_amount_input.setStyleSheet(INPUT_STYLE_FEED)
+        add_row.addWidget(self._food_amount_input)
+
+        self._food_type_combo = QComboBox()
+        self._food_type_combo.addItem("主食", "staple")
+        self._food_type_combo.addItem("零食", "snack")
+        self._food_type_combo.setFixedWidth(72)
+        self._food_type_combo.setStyleSheet(COMBO_STYLE_FEED)
+        add_row.addWidget(self._food_type_combo)
+
+        add_btn = QPushButton("+ 添加")
+        add_btn.setStyleSheet(ACCENT_BTN_STYLE_FEED)
+        add_btn.setCursor(QCursor(Qt.PointingHandCursor))
+        add_btn.clicked.connect(self._add_food)
+        add_row.addWidget(add_btn)
+        food_layout.addLayout(add_row)
+
+        self._food_list = QListWidget()
+        self._food_list.setStyleSheet(LIST_STYLE_FEED)
+        food_layout.addWidget(self._food_list)
+
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(8)
+
+        feed_btn = QPushButton("投喂选中")
+        feed_btn.setStyleSheet(ACCENT_BTN_STYLE_FEED)
+        feed_btn.setCursor(QCursor(Qt.PointingHandCursor))
+        feed_btn.clicked.connect(self._pick_selected)
+        btn_row.addWidget(feed_btn)
+
+        del_btn = QPushButton("删除")
+        del_btn.setStyleSheet(DANGER_BTN_STYLE_FEED)
+        del_btn.setCursor(QCursor(Qt.PointingHandCursor))
+        del_btn.clicked.connect(self._remove_food)
+        btn_row.addWidget(del_btn)
+
+        btn_row.addStretch()
+        food_layout.addLayout(btn_row)
+
+        outer.addWidget(food_box, stretch=1)
+
+        self._is_full = self._hunger_level <= FULL_THRESHOLD
+        self._refresh_food_list()
+
+    def _refresh_food_list(self):
+        self._food_list.clear()
+        for food in self._foods:
+            type_tag = "零食" if food["type"] == "snack" else "主食"
+            disabled = self._is_full and food["type"] == "staple"
+            suffix = "（吃饱啦~）" if disabled else ""
+            text = f"  {food['name']}    +{food['amount']} 饱腹度    [{type_tag}]{suffix}"
+            item = QListWidgetItem(text)
+            item.setData(Qt.UserRole, food)
+            if disabled:
+                item.setForeground(QColor(192, 196, 204))
+            self._food_list.addItem(item)
+
+
+    def _add_food(self):
+        name = self._food_name_input.text().strip()
+        if not name:
+            QMessageBox.warning(self, "提示", "请输入食物名称")
+            return
+        if any(f["name"] == name for f in self._foods):
+            QMessageBox.warning(self, "提示", f"已存在名为「{name}」的食物")
+            return
+        try:
+            amount = int(self._food_amount_input.text().strip() or "0")
+        except ValueError:
+            QMessageBox.warning(self, "提示", "饱腹度需为整数")
+            return
+        amount = max(1, min(amount, 100))
+        food_type = self._food_type_combo.currentData()
+        self._foods.append({"name": name, "amount": amount, "type": food_type})
+        self._persist_foods()
+        self._food_name_input.clear()
+        self._food_amount_input.clear()
+        self._refresh_food_list()
+
+    def _remove_food(self):
+        item = self._food_list.currentItem()
+        if not item:
+            QMessageBox.warning(self, "提示", "请先选择一个食物")
+            return
+        food = item.data(Qt.UserRole)
+        reply = QMessageBox.question(
+            self, "确认删除", f"确定要删除食物「{food['name']}」吗？",
+            QMessageBox.Yes | QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            self._foods = [f for f in self._foods if f["name"] != food["name"]]
+            self._persist_foods()
+            self._refresh_food_list()
+
+    def _pick_selected(self):
+        item = self._food_list.currentItem()
+        if not item:
+            QMessageBox.warning(self, "提示", "请先选择一个食物")
+            return
+        food = item.data(Qt.UserRole)
+        if self._is_full and food["type"] == "staple":
+            QMessageBox.information(self, "饱腹啦", "雨竹现在饱饱的，只吃零食哦~")
+            return
+        self.food_selected.emit(food)
+        self.accept()
+
+    def _persist_foods(self):
+        try:
+            save_foods(self._foods)
+        except Exception:
+            pass
+
+    def _apply_hunger_bar_color(self):
+        level = self._hunger_level
+        if level <= FULL_THRESHOLD:
+            color = "#67c23a"
+        elif level <= 50:
+            color = "#5078f0"
+        elif level <= 80:
+            color = "#e6a23c"
+        else:
+            color = "#f56c6c"
+        self._hunger_bar.setStyleSheet(
+            "QProgressBar { background: #ebedf1; border: none; border-radius: 4px; }"
+            f"QProgressBar::chunk {{ background: {color}; border-radius: 4px; }}"
+        )
+
+    def _status_text(self):
+        level = self._hunger_level
+        if level <= FULL_THRESHOLD:
+            return "雨竹现在饱饱的~"
+        elif level <= 50:
+            return "雨竹还好，有点想吃东西~"
+        elif level <= 80:
+            return "雨竹饿了，快喂喂她~"
+        else:
+            return "雨竹快饿坏了！"
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        path = QPainterPath()
+        path.addRoundedRect(QRectF(self.rect()), 12, 12)
+        self.setMask(QRegion(path.toFillPolygon().toPolygon()))
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._drag_pos = event.globalPos() - self.frameGeometry().topLeft()
+            event.accept()
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() & Qt.LeftButton and self._drag_pos is not None:
+            self.move(event.globalPos() - self._drag_pos)
+            event.accept()
+
+    def mouseReleaseEvent(self, event):
+        self._drag_pos = None
+
+    def _card_rect(self):
+        m = 20
+        return QRectF(m, m, self.width() - m * 2, self.height() - m * 2)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        card = self._card_rect()
+        radius = 12
+        for i in range(4):
+            offset = 6 - i * 1.5
+            r = card.adjusted(-offset, -offset + 2, offset, offset + 2)
+            alpha = 8 + i * 8
+            painter.setBrush(QBrush(QColor(60, 65, 80, alpha)))
+            painter.setPen(Qt.NoPen)
+            painter.drawRoundedRect(r, radius + offset, radius + offset)
+        painter.setBrush(QBrush(QColor(251, 251, 253)))
+        painter.setPen(QPen(QColor(230, 232, 236), 0.5))
+        painter.drawRoundedRect(card, radius, radius)
+
+
 class EdgeFloatingBlock(QWidget):
     def __init__(self):
         super().__init__()
@@ -681,20 +1027,82 @@ class EdgeFloatingBlock(QWidget):
         self._vision_busy = False  
         self._config = None
 
-        self._poller = Poller(self) 
+        self._poller = Poller(self)
         self._poller.status_ready.connect(self._on_poller_status)
+        self._poller.vision_trigger.connect(self._on_poller_vision)
+
+        self._hunger_level = 0
+        self._last_hunger_notify = 0
+        self._hunger_timer = QTimer(self)
+        self._hunger_timer.timeout.connect(self._increase_hunger)
 
         self.init_ui()
 
+    def _increase_hunger(self):
+        if self._hunger_level < 100:
+            self._hunger_level += 1
+            self._update_hunger_display(self._hunger_level)
+
+    def _feed(self, amount):
+        self._hunger_level = max(0, self._hunger_level - amount)
+        self._update_hunger_display(self._hunger_level)
+
+    def _update_hunger_display(self, level):
+        thresholds = {50: "有点饿了~", 80: "好饿好饿...", 100: "饿到没力气了..."}
+        if level in thresholds and self._last_hunger_notify != level:
+            self._content_bar.show_content(thresholds[level])
+            self._last_hunger_notify = level
+        elif level < 50:
+            self._last_hunger_notify = 0
+
+    def _apply_hunger_config(self):
+        if not self._config:
+            return
+        enabled = self._config.get("hunger_enabled", False)
+        try:
+            interval = int(self._config.get("hunger_interval", 10))
+        except (TypeError, ValueError):
+            interval = 10
+        self._hunger_timer.setInterval(max(1, interval) * 1000)
+        if enabled and not self._hunger_timer.isActive():
+            self._hunger_timer.start()
+        elif not enabled and self._hunger_timer.isActive():
+            self._hunger_timer.stop()
+
+    def _apply_poller_config(self):
+        if self._config:
+            self._poller.update_config(self._config)
+
+    def _on_poller_vision(self):
+        self._capture()
+
     def _on_poller_status(self, status_text):
         if self._ai:
-            self._ai.send_message(status_text)
+            if self._hunger_timer.isActive():
+                hunger = self._hunger_level
+                desc = self._hunger_description(hunger)
+                full_status = f"{status_text}；雨竹当前饥饿度: {hunger}/100（{desc}）"
+            else:
+                full_status = status_text
+            self._ai.send_message(full_status)
+
+    def _hunger_description(self, level):
+        if level <= FULL_THRESHOLD:
+            return "饱腹"
+        elif level <= 50:
+            return "微饿"
+        elif level <= 80:
+            return "饥饿"
+        else:
+            return "非常饥饿"
 
     def set_ai_client(self, client, config=None):
         self._ai = client
         self._config = config or {}
         self._ai.response_ready.connect(self._on_ai_response)
         self._apply_size_config()
+        self._apply_hunger_config()
+        self._apply_poller_config()
 
 
     def _apply_size_config(self):
@@ -863,6 +1271,12 @@ class EdgeFloatingBlock(QWidget):
 
         menu.addSeparator()
 
+        feed_action = QAction("喂雨竹", self)
+        feed_action.triggered.connect(self._on_feed)
+        menu.addAction(feed_action)
+
+        menu.addSeparator()
+
         exit_action = QAction("退出", self)
         exit_action.triggered.connect(QApplication.quit)
         menu.addAction(exit_action)
@@ -931,6 +1345,29 @@ class EdgeFloatingBlock(QWidget):
             "请客观、简洁地描述这张屏幕截图的内容，包括可见的窗口、文字、界面元素等。描述将交给主AI作为上下文。"
         )
 
+    def _on_feed(self):
+        dialog = FeedDialog(self._hunger_level, self)
+        dialog.food_selected.connect(self._on_food_selected)
+        dialog.exec_()
+
+    def _on_food_selected(self, food):
+        was_full = self._hunger_level <= FULL_THRESHOLD
+        self._feed(food["amount"])
+        if was_full and food["type"] == "snack":
+            msg = "虽然已经饱了，但零食还是吃得下~"
+        else:
+            msg = f"谢谢投喂{food['name']}~好好吃！"
+        self._content_bar.show_content(msg)
+        if self._ai:
+            type_desc = "零食" if food["type"] == "snack" else "主食"
+            notify = (f"（系统事件：用户刚刚投喂了雨竹。食物：{food['name']}；"
+                      f"回复饱腹度：{food['amount']}；食品类型：{type_desc}。"
+                      f"雨竹当前饥饿度：{self._hunger_level}/100。）")
+            print(" -----[ Action ]----- ", "\n",
+              "[", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "]", "\n",
+              "\"", f"你投喂了{food['name']}给雨竹", "\"","\n")
+            self._ai.send_message(notify)
+
     def _on_vision_describe(self, description):
         self._vision_busy = False
         if self._vision_ai is not None:
@@ -944,6 +1381,8 @@ class EdgeFloatingBlock(QWidget):
     def _on_config_saved(self, config):
         self._config = config
         self._apply_size_config()
+        self._apply_hunger_config()
+        self._apply_poller_config()
         if self._ai:
             self._ai.update(
                 config.get("provider", "stepfun"),

@@ -5,6 +5,7 @@ from tools import get_data_path
 
 DATA_DIR = get_data_path()
 CONFIG_PATH = os.path.join(DATA_DIR, "config.json")
+FOODS_PATH = os.path.join(DATA_DIR, "foods.json")
 
 DEFAULT_TONE = "ruanmengnvsheng"
 
@@ -33,8 +34,19 @@ DEFAULT_CONFIG = {
     "popup_width": 420,
     "prompt": DEFAULT_PROMPT,
     "tts_tone": DEFAULT_TONE,
-    "tts_instruction": DEFAULT_TTS_INSTRUCTION
+    "tts_instruction": DEFAULT_TTS_INSTRUCTION,
+    "hunger_enabled": False,
+    "hunger_interval": 10,
+    "poller_interval": 90,
+    "poller_vision_enabled": False,
 }
+
+DEFAULT_FOODS = [
+    {"name": "猫粮",   "amount": 40, "type": "staple"},
+    {"name": "罐头",   "amount": 60, "type": "staple"},
+    {"name": "小鱼干", "amount": 15, "type": "snack"},
+    {"name": "鸡胸肉", "amount": 25, "type": "snack"},
+]
 
 def load_config():
     
@@ -62,5 +74,30 @@ def save_config(cfg):
         current.update(cfg)
         with open(CONFIG_PATH, "w", encoding="utf-8") as f:
             json.dump(current, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+def load_foods():
+    os.makedirs(DATA_DIR, exist_ok=True)
+    if not os.path.exists(FOODS_PATH):
+        save_foods(DEFAULT_FOODS)
+        return [dict(f) for f in DEFAULT_FOODS]
+    try:
+        with open(FOODS_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, list):
+            return data
+        save_foods(DEFAULT_FOODS)
+        return [dict(f) for f in DEFAULT_FOODS]
+    except Exception:
+        shutil.copy(FOODS_PATH, FOODS_PATH + ".bak")
+        save_foods(DEFAULT_FOODS)
+        return [dict(f) for f in DEFAULT_FOODS]
+
+def save_foods(foods):
+    os.makedirs(DATA_DIR, exist_ok=True)
+    try:
+        with open(FOODS_PATH, "w", encoding="utf-8") as f:
+            json.dump(foods, f, ensure_ascii=False, indent=2)
     except Exception:
         pass

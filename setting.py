@@ -1,6 +1,8 @@
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel,
                              QGroupBox, QLineEdit, QComboBox, QFormLayout,
-                             QTextEdit,QMessageBox,QPushButton,QHBoxLayout)
+                             QTextEdit,QMessageBox,QPushButton,QHBoxLayout,QCheckBox,)
+
+from PyQt5.QtCore import QSettings
 
 from config_manager import load_config, save_config
 
@@ -56,6 +58,19 @@ ACCENT_BTN_STYLE = """
         font-size: 12px; font-weight: bold;
     }
     QPushButton:hover { background: #6090E8; }
+"""
+
+STYLE = """
+    QGroupBox {
+        border: 1px solid #ebedf1;
+        border-radius: 8px; margin-top: 12px;
+        padding: 16px 12px 12px 12px;
+        font-size: 12px; color: #787d88;
+    }
+    QGroupBox::title {
+        subcontrol-origin: margin; left: 16px; padding: 0 6px;
+    }
+    QLabel { color: #1e2026; }
 """
 
 # 厂商列表（id, 显示名）
@@ -349,6 +364,8 @@ class VisionSettingPage(BaseSettingPage):
 
 class SettingPage(BaseSettingPage):
     def _build(self):
+
+        self._settings = QSettings()
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 16, 24, 16)
         layout.setSpacing(12)
@@ -369,25 +386,95 @@ class SettingPage(BaseSettingPage):
         form = QFormLayout()
         form.setSpacing(10)
 
+        #从 AxleScore 搬迁来的设置组UI
 
-        form.addWidget(self._label("尝试使用 QVariantAnimation 步进优化替代 pyqtProperty 驱动（实验性）："))
+        settings_box = QGroupBox("设置项")
+        settings_box.setStyleSheet(STYLE)
+        settings_layout = QVBoxLayout(settings_box)
+        settings_layout.setSpacing(8)
+
+        row = QHBoxLayout()
+        row.addWidget(self._label("使用 QVariantAnimation 步进优化（实验性）："))
         self.startup_btn = QPushButton("未启用")
         self.startup_btn.setStyleSheet(ACCENT_BTN_STYLE)
         self.startup_btn.clicked.connect(self.startup)
-        form.addWidget(self.startup_btn)
+        row.addWidget(self.startup_btn)
+        row.addStretch()
+        settings_layout.addLayout(row)
 
-        box_layout.addLayout(form)
-        layout.addWidget(box)
-        layout.addStretch()
+        row2 = QHBoxLayout()
+        row2.addWidget(self._label("饥饿度设定："))
+        self.hunger_enabled_cb = QCheckBox("启用")
+        self.hunger_enabled_cb.setChecked(self._config.get("hunger_enabled", False))
+        row2.addWidget(self.hunger_enabled_cb)
+        row2.addStretch()
+        settings_layout.addLayout(row2)
+
+        row3 = QHBoxLayout()
+        row3.addWidget(self._label("饥饿度增长间隔（秒）："))
+        self.hunger_interval_edit = QLineEdit(str(self._config.get("hunger_interval", 10)))
+        self.hunger_interval_edit.setStyleSheet(INPUT_STYLE)
+        self.hunger_interval_edit.setPlaceholderText("10")
+        row3.addWidget(self.hunger_interval_edit)
+        row3.addStretch()
+        settings_layout.addLayout(row3)
+
+        row4 = QHBoxLayout()
+        row4.addWidget(self._label("轮询间隔（秒，实际 ±50% 抖动）："))
+        self.poller_interval_edit = QLineEdit(str(self._config.get("poller_interval", 90)))
+        self.poller_interval_edit.setStyleSheet(INPUT_STYLE)
+        self.poller_interval_edit.setPlaceholderText("90")
+        row4.addWidget(self.poller_interval_edit)
+        row4.addStretch()
+        settings_layout.addLayout(row4)
+
+        row5 = QHBoxLayout()
+        row5.addWidget(self._label("轮询时允许雨竹查看屏幕（1/2 概率）："))
+        self.poller_vision_cb = QCheckBox("启用")
+        self.poller_vision_cb.setChecked(self._config.get("poller_vision_enabled", False))
+        row5.addWidget(self.poller_vision_cb)
+        row5.addStretch()
+        settings_layout.addLayout(row5)
+
+        settings_layout.addStretch()
+        layout.addWidget(settings_box)
+
+    def save_values(self):
+        try:
+            hunger_interval = int(self.hunger_interval_edit.text().strip() or "10")
+        except ValueError:
+            hunger_interval = 10
+        hunger_interval = max(1, hunger_interval)
+
+        try:
+            poller_interval = int(self.poller_interval_edit.text().strip() or "90")
+        except ValueError:
+            poller_interval = 90
+        poller_interval = max(10, poller_interval)
+
+        return {
+            "hunger_enabled": self.hunger_enabled_cb.isChecked(),
+            "hunger_interval": hunger_interval,
+            "poller_interval": poller_interval,
+            "poller_vision_enabled": self.poller_vision_cb.isChecked(),
+        }
+
+    def reload_values(self, cfg):
+        self.hunger_enabled_cb.setChecked(cfg.get("hunger_enabled", False))
+        self.hunger_interval_edit.setText(str(cfg.get("hunger_interval", 10)))
+        self.poller_interval_edit.setText(str(cfg.get("poller_interval", 90)))
+        self.poller_vision_cb.setChecked(cfg.get("poller_vision_enabled", False))
 
     def startup(self):
         message = QMessageBox.question(None, "确认启用",
                                      f"确定要启用该实验选项吗？\n若发生错误，目前的程序无法正确地fallback至 pyqtProperty 驱动，进而导致崩溃或异常。\n且 QVariantAnimation 所带来的优化极其有限。",
                                      QMessageBox.Yes | QMessageBox.No)
+        message.setStyleSheet("")
         if message == QMessageBox.Yes:
             message1 = QMessageBox.question(None, "再次警告",
                                      f"此实验性设置项可能会带来风险。可能导致 QVariantAnimation 与现有动画冲突，界面可能出现卡死或异常。",
                                      QMessageBox.Yes | QMessageBox.No)
+            message1.setStyleSheet("")
             if message1 == QMessageBox.Yes:
                 url = "https://www.bilibili.com/video/BV1UT42167xb"
                 webbrowser.open(url)
