@@ -1334,7 +1334,6 @@ class EdgeFloatingBlock(QWidget):
         self._vision_ai.set_system_prompt("你是图像描述助手。请用中文客观、准确地描述图片内容，不要加入个人情感或对话语气。")
         self._vision_busy = True
         self._vision_ai.send_message(_data)
-        self._vision_busy = False
 
     def capture(self):
         try:
