@@ -1401,7 +1401,7 @@ class EdgeFloatingBlock(QWidget):
         if self._vision_ai is not None:
             self._vision_ai.set_system_prompt("")
         if self._ai is not None:
-            user_msg = f"现在是{datetime.now().strftime("%Y-%m-%d %H:%M:%S") }我刚发了一张屏幕截图给你，以下是图片内容描述：\n{description}\n请基于这个描述回复我。"
+            user_msg = f"现在是{datetime.now().strftime('%Y-%m-%d %H:%M:%S') }我刚发了一张屏幕截图给你，以下是图片内容描述：\n{description}\n请基于这个描述回复我。"
             self._ai.send_message(user_msg)
         else:
             self._on_ai_response(description)
