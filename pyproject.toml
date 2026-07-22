@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "一个轻量化桌宠"
 readme = "README.md"
 license = "GPL-3.0-only"
-requires-python = ">=3.8"
+requires-python = ">=3.12"
 dependencies = [
     "PyQt5>=5.15",
     "requests>=2.28",
