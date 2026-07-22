@@ -2,7 +2,7 @@
 
 
 ![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg) 
-![Python](https://img.shields.io/badge/Python-3.8%2B-blue) 
+![Python](https://img.shields.io/badge/Python-3.12%2B-blue) 
 
 雨竹Bot-一个轻量化桌宠，基于 PyQt5 实现。  
 桌面宠物会贴边吸附，单击弹出输入框，支持与 AI 对话并展示气泡回复。
